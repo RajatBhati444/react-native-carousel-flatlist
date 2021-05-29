@@ -1,8 +1,9 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {FlatList, Image, useWindowDimensions} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -30,12 +31,14 @@ const SLIDES = [
       'https://images.pexels.com/photos/7664100/pexels-photo-7664100.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
     title: 'Spring',
     subtitle: 'April showers, may flowers.',
-  },{
+  },
+  {
     image:
       'https://images.pexels.com/photos/7793853/pexels-photo-7793853.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
     title: 'Spring',
     subtitle: 'May2  showers, may flowers.',
-  },{
+  },
+  {
     image:
       'https://images.pexels.com/photos/1535985/pexels-photo-1535985.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
     title: 'Spring',
@@ -45,81 +48,71 @@ const SLIDES = [
 
 function App() {
   const {height, width} = useWindowDimensions();
-  const opacity = useSharedValue(0);
-  const [activeIndex, setActiveindex]= useState(null);
-
-  useEffect(() => {
-    opacity.value = withTiming(1, {duration: 1000});
-  }, [opacity]);
-
-  const onViewRef = React.useRef((viewableItems: any) => {
-    console.log('active index: ', viewableItems?.viewableItems[0]?.index);
-    setActiveindex(viewableItems?.viewableItems[0]?.index);
-  });
-
-  const viewConfigRef = React.useRef({
-    // viewAreaCoveragePercentThreshold: 50,
-    itemVisiblePercentThreshold: 75, 
-    waitForInteraction: true});
-
-    const Fade2=useCallback(
-      (props: any) => {
-        const {children, config = {duration: 700}, activeIndex} = props;
-  console.log({activeIndex});
-  const opacity = useSharedValue(0);
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  useEffect(() => {
-    opacity.value = withTiming(1, config);
-    return () => {
-      opacity.value = withTiming(0, config);
-    };
-  }, [config, opacity, activeIndex]);
-
-  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
-      },
-      [activeIndex],
-    )
+  const [x, setX] = useState(0);
 
   return (
     <FlatList
       data={SLIDES}
       horizontal
-      onViewableItemsChanged={onViewRef.current}
-      viewabilityConfig={viewConfigRef.current}
-      renderItem={
-        ({item, index}) => 
-       {
-         console.log(activeIndex===index,activeIndex,index,'activeIndex===index');
-         return <Fade2 config={{duration: activeIndex===index? 3000: 0}} activeIndex={activeIndex}>
-          <Image style={[{height, width}]} source={{uri: item.image}} />
-        </Fade2>
-        
-      }
-      }
+      renderItem={({item, index}) => {
+        return (
+          <Slide
+            item={item}
+            height={height}
+            width={width}
+            x={x}
+            index={index}
+          />
+        );
+      }}
       pagingEnabled
+      onScroll={ev => {
+        setX(ev.nativeEvent.contentOffset.x);
+      }}
     />
   );
 }
 
 export default App;
 
-function Fade(props: any) {
-  const {children, config = {duration: 700}, activeIndex} = props;
-  console.log({activeIndex});
-  const opacity = useSharedValue(0);
+function Slide(props: any) {
+  const {height, width, item, index, x} = props;
+  const _x = useSharedValue(0);
+  console.log({
+    x,
+    width,
+  });
+  const active = index === Math.abs(Math.floor((x + width) / width));
+
+  const opacity = useSharedValue(1);
+  // const scale = useSharedValue(1);
+
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
 
   useEffect(() => {
-    opacity.value = withTiming(1, config);
-    return () => {
-      opacity.value = withTiming(0, config);
-    };
-  }, [config, opacity, activeIndex]);
+    _x.value = x;
+    if (active) {
+      console.log({_: index + 1.0 - (x + width) / width});
+      opacity.value = index + 1.0 - (x + width) / width;
+    } else {
+      console.log({__: Math.abs(3 - (x + width) / width)});
+      opacity.value = Math.abs(3 - (x + width) / width);
+    }
+  }, [_x, active, index, opacity, width, x]);
 
-  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
+  // useEffect(() => {
+  //   if (active) {
+  //     opacity.value = withTiming(1, {duration: 1000});
+  //   } else {
+  //     opacity.value = withTiming(0.8, {duration: 1000});
+  //   }
+  // }, [opacity, active, scale]);
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Image style={[{height, width}]} source={{uri: item.image}} />
+    </Animated.View>
+  );
 }
