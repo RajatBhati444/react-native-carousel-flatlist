@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {FlatList, Image, useWindowDimensions} from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -27,38 +27,45 @@ const SLIDES = [
   },
   {
     image:
-      'https://images.pexels.com/photos/4016173/pexels-photo-4016173.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+      'https://images.pexels.com/photos/7664100/pexels-photo-7664100.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
     title: 'Spring',
     subtitle: 'April showers, may flowers.',
+  },{
+    image:
+      'https://images.pexels.com/photos/7793853/pexels-photo-7793853.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+    title: 'Spring',
+    subtitle: 'May2  showers, may flowers.',
+  },{
+    image:
+      'https://images.pexels.com/photos/1535985/pexels-photo-1535985.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+    title: 'Spring',
+    subtitle: 'Jann widow, may flowers.',
   },
 ];
 
 function App() {
   const {height, width} = useWindowDimensions();
   const opacity = useSharedValue(0);
+  const [activeIndex, setActiveindex]= useState(null);
 
   useEffect(() => {
     opacity.value = withTiming(1, {duration: 1000});
   }, [opacity]);
 
-  return (
-    <FlatList
-      data={SLIDES}
-      horizontal
-      renderItem={({item}) => (
-        <Fade>
-          <Image style={[{height, width}]} source={{uri: item.image}} />
-        </Fade>
-      )}
-      pagingEnabled
-    />
-  );
-}
+  const onViewRef = React.useRef((viewableItems: any) => {
+    console.log('active index: ', viewableItems?.viewableItems[0]?.index);
+    setActiveindex(viewableItems?.viewableItems[0]?.index);
+  });
 
-export default App;
+  const viewConfigRef = React.useRef({
+    // viewAreaCoveragePercentThreshold: 50,
+    itemVisiblePercentThreshold: 75, 
+    waitForInteraction: true});
 
-function Fade(props: any) {
-  const {children, config = {duration: 700}} = props;
+    const Fade2=useCallback(
+      (props: any) => {
+        const {children, config = {duration: 700}, activeIndex} = props;
+  console.log({activeIndex});
   const opacity = useSharedValue(0);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -69,7 +76,50 @@ function Fade(props: any) {
     return () => {
       opacity.value = withTiming(0, config);
     };
-  }, [config, opacity]);
+  }, [config, opacity, activeIndex]);
+
+  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
+      },
+      [activeIndex],
+    )
+
+  return (
+    <FlatList
+      data={SLIDES}
+      horizontal
+      onViewableItemsChanged={onViewRef.current}
+      viewabilityConfig={viewConfigRef.current}
+      renderItem={
+        ({item, index}) => 
+       {
+         console.log(activeIndex===index,activeIndex,index,'activeIndex===index');
+         return <Fade2 config={{duration: activeIndex===index? 3000: 0}} activeIndex={activeIndex}>
+          <Image style={[{height, width}]} source={{uri: item.image}} />
+        </Fade2>
+        
+      }
+      }
+      pagingEnabled
+    />
+  );
+}
+
+export default App;
+
+function Fade(props: any) {
+  const {children, config = {duration: 700}, activeIndex} = props;
+  console.log({activeIndex});
+  const opacity = useSharedValue(0);
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  useEffect(() => {
+    opacity.value = withTiming(1, config);
+    return () => {
+      opacity.value = withTiming(0, config);
+    };
+  }, [config, opacity, activeIndex]);
 
   return <Animated.View style={animatedStyle}>{children}</Animated.View>;
 }
